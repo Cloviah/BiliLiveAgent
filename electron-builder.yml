@@ -1,0 +1,25 @@
+appId: com.cloviah.bililiveagent
+productName: BiliLiveAgent
+copyright: Copyright © 2026 Cloviah
+directories:
+  output: release
+  buildResources: build
+asar: true
+files:
+  - dist/**/*
+  - package.json
+  - personas/**/*
+  - scripts/**/*
+  - node_modules/sql.js/dist/sql-wasm.wasm
+extraResources:
+  - from: node_modules/sql.js/dist/sql-wasm.wasm
+    to: sql-wasm.wasm
+win:
+  target:
+    - portable
+  artifactName: BiliLiveAgent-${version}-portable.${ext}
+  # 跳过 rcedit/签名步骤：winCodeSign 解压符号链接需要管理员权限或开发者模式，
+  # 便携版不需要写入 exe 版本资源也能正常运行
+  signAndEditExecutable: false
+portable:
+  requestExecutionLevel: user

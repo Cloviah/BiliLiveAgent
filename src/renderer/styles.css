@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background-color: #0b1220;
+    background-image: linear-gradient(160deg, #0b1220 0%, #121a2b 45%, #161f33 100%);
+    color: #e8eef7;
+    font-family: 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl;
+  }
+  .btn {
+    @apply inline-flex cursor-pointer select-none items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-medium transition-all duration-200;
+  }
+  .btn-primary {
+    @apply btn border border-neon-teal/40 bg-neon-teal/15 text-neon-teal hover:bg-neon-teal/25 hover:shadow-glow;
+  }
+  .btn-ghost {
+    @apply btn border border-white/10 bg-white/5 text-soft-sub hover:bg-white/10 hover:text-soft-text;
+  }
+  .btn-danger {
+    @apply btn border border-state-bad/40 bg-state-bad/15 text-state-bad hover:bg-state-bad/25;
+  }
+  .input {
+    @apply w-full rounded-xl border border-white/10 bg-ink-900/70 px-3 py-2 text-[13px] text-soft-text outline-none transition placeholder:text-soft-sub/50 focus:border-neon-teal/60 focus:ring-2 focus:ring-neon-teal/20;
+  }
+  .label {
+    @apply text-[12px] text-soft-sub;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px];
+  }
+  .section-title {
+    @apply text-[15px] font-medium text-soft-text;
+  }
+}
