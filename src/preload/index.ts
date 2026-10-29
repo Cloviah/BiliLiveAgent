@@ -58,6 +58,8 @@ const api = {
     saveRoom: (summary: string) => ipcRenderer.invoke(CH.memorySaveRoom, summary),
     saveUser: (payload: unknown) => ipcRenderer.invoke(CH.memorySaveUser, payload),
     deleteUser: (uid: number) => ipcRenderer.invoke(CH.memoryDeleteUser, uid),
+    compress: () => ipcRenderer.invoke(CH.memoryCompress),
+    stats: () => ipcRenderer.invoke(CH.memoryStats),
   },
   usage: {
     get: () => ipcRenderer.invoke(CH.usageGet),

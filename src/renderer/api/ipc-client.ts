@@ -48,6 +48,8 @@ interface Bridge {
     saveRoom: (summary: string) => Promise<boolean>;
     saveUser: (payload: { uid: number; uname: string; note: string }) => Promise<boolean>;
     deleteUser: (uid: number) => Promise<boolean>;
+    compress: () => Promise<{ ok: boolean; message: string }>;
+    stats: () => Promise<{ summaryChars: number; userCount: number }>;
   };
   usage: { get: () => Promise<UsageStats> };
   logs: { get: (limit?: number) => Promise<LogEntry[]>; export: () => Promise<string> };

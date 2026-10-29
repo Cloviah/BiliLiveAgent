@@ -6,13 +6,16 @@ interface MemoryFile {
   users: Record<string, UserMemory>;
 }
 
-const EMPTY: MemoryFile = { rooms: {}, users: {} };
+/** 每次返回全新对象：共享常量会被写入操作污染，导致不同数据目录互相串数据 */
+function emptyFile(): MemoryFile {
+  return { rooms: {}, users: {} };
+}
 
 export class ConversationRepo {
   constructor(private readonly store: Store) {}
 
   private read(): MemoryFile {
-    return this.store.readJson<MemoryFile>('memory.json', { ...EMPTY });
+    return this.store.readJson<MemoryFile>('memory.json', emptyFile());
   }
 
   private write(data: MemoryFile): void {

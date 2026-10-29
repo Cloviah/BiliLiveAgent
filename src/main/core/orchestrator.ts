@@ -15,7 +15,7 @@ import type { Guards } from '../agent/guards';
 import type { ChatMessage, ChatResult, DeepSeekClient } from '../agent/deepseek';
 import type { PluginRegistry } from '../plugins/registry';
 import { parseDecision } from '../agent/decision';
-import { buildSystemPrompt, buildUserPrompt } from '../agent/prompts';
+import { buildCompressPrompt, buildSystemPrompt, buildUserPrompt, COMPRESS_SYSTEM_PROMPT } from '../agent/prompts';
 import type { Budget } from './budget';
 import type { RateLimiter } from './rate-limiter';
 import type { Scheduler } from './scheduler';
@@ -40,6 +40,7 @@ export class AgentEngine {
   private paused = false;
   private cooldownTimer?: NodeJS.Timeout;
   private recentKeys = new Map<string, number>();
+  private lastCompressAt = 0;
 
   constructor(
     private readonly config: ConfigStore,
@@ -132,6 +133,7 @@ export class AgentEngine {
     this.cooldownTimer = undefined;
     this.timer = setInterval(() => {
       void this.decide(false);
+      void this.maybeCompress();
     }, this.scheduler.decisionIntervalMs());
   }
 
@@ -305,6 +307,66 @@ export class AgentEngine {
       this.logger.info('engine', `工具调用第 ${round + 1} 轮完成（${calls.map((c) => c.name).join('、')}）`);
     }
     return result;
+  }
+
+  /** 按配置周期检查一次记忆整理（低频，不会每个决策周期都跑） */
+  private async maybeCompress(): Promise<void> {
+    const cfg = this.cfg();
+    if (!cfg.memory?.autoCompress) return;
+    const now = Date.now();
+    if (now - this.lastCompressAt < cfg.memory.intervalMs) return;
+    this.lastCompressAt = now;
+    await this.compressNow(false);
+  }
+
+  /**
+   * 整理记忆：压缩过长的房间摘要、归档长期不互动的观众记忆。
+   * force = true 时忽略阈值与周期，立即整理（界面按钮用）。
+   */
+  async compressNow(force = true): Promise<{ compressed: boolean; archived: number }> {
+    const cfg = this.cfg();
+    const mem = cfg.memory;
+    let compressed = false;
+
+    if (this.roomId && (force || this.memory.needsCompress(this.roomId, mem.maxSummaryChars))) {
+      // 预算耗尽时不做模型压缩，只做兜底裁剪，避免额外花钱
+      if (!force && !this.budget.withinBudget()) {
+        compressed = this.memory.trimRoomSummary(this.roomId, mem.maxSummaryChars);
+      } else {
+        compressed = await this.memory.compressRoom(this.roomId, mem.keepBullets, (summary, bullets) =>
+          this.summarizeWithModel(summary, bullets),
+        );
+        if (!compressed) compressed = this.memory.trimRoomSummary(this.roomId, mem.maxSummaryChars);
+      }
+    }
+
+    let archived = 0;
+    if (force || mem.autoCompress) archived = this.memory.archiveStaleUsers(mem.staleUserDays);
+    if (compressed || archived) this.hooks.onStats();
+    return { compressed, archived };
+  }
+
+  /** 当前记忆规模，供界面显示 */
+  memoryStats(): { summaryChars: number; userCount: number } {
+    return this.memory.stats(this.roomId || this.cfg().room.roomId);
+  }
+
+  private async summarizeWithModel(summary: string, keepBullets: number): Promise<string> {
+    const cfg = this.cfg();
+    const result = await this.model.chat(
+      [
+        { role: 'system', content: COMPRESS_SYSTEM_PROMPT },
+        { role: 'user', content: buildCompressPrompt(summary, keepBullets) },
+      ],
+      {
+        baseUrl: cfg.model.baseUrl,
+        model: cfg.model.model,
+        temperature: 0.2,
+        maxTokens: 400,
+      },
+    );
+    this.noteUsage(result);
+    return (result.content ?? '').trim();
   }
 
   private noteUsage(result: ChatResult): void {

@@ -35,6 +35,15 @@ export const DEFAULT_RETENTION = {
   memoryDays: 180,
 };
 
+/** 记忆自动整理默认值：防止房间摘要与观众记忆无上限膨胀、拖长提示词 */
+export const DEFAULT_MEMORY = {
+  autoCompress: true,
+  maxSummaryChars: 900,
+  keepBullets: 6,
+  staleUserDays: 30,
+  intervalMs: 6 * 60 * 60 * 1000,
+};
+
 /** 默认每日预算 */
 export const DEFAULT_DAILY_MAX_REQUESTS = 600;
 export const DEFAULT_DAILY_MAX_TOKENS = 600_000;

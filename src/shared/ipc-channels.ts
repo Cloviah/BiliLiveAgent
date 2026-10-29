@@ -42,6 +42,8 @@ export const CH = {
   usageGet: 'usage:get',
   pluginSearchTest: 'plugin:search:test',
   pluginUsage: 'plugin:usage',
+  memoryCompress: 'memory:compress',
+  memoryStats: 'memory:stats',
   logsGet: 'logs:get',
   logsExport: 'logs:export',
   dataExport: 'data:export',

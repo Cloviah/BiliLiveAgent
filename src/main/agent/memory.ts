@@ -3,6 +3,9 @@ import type { ConversationRepo } from '../store/conversation-repo';
 import type { Guards } from './guards';
 import type { Logger } from '../utils/logger';
 
+/** 摘要压缩函数：输入当前摘要与目标要点数，返回压缩后的摘要 */
+export type Summarizer = (summary: string, keepBullets: number) => Promise<string>;
+
 export class MemoryManager {
   constructor(
     private readonly repo: ConversationRepo,
@@ -104,5 +107,92 @@ export class MemoryManager {
 
   prune(retentionDays: number): number {
     return this.repo.pruneUsers(retentionDays);
+  }
+
+  /** 当前记忆规模，供界面展示与压缩判断 */
+  stats(roomId: number): { summaryChars: number; userCount: number } {
+    const room = this.repo.getRoom(roomId);
+    return { summaryChars: room?.summary?.length ?? 0, userCount: this.repo.listUsers().length };
+  }
+
+  /** 房间摘要是否已超过阈值，需要压缩 */
+  needsCompress(roomId: number, maxChars: number): boolean {
+    if (maxChars <= 0) return false;
+    return (this.repo.getRoom(roomId)?.summary?.length ?? 0) > maxChars;
+  }
+
+  /**
+   * 把冗长的房间摘要压缩成少量要点。压缩失败时保留原文，绝不丢记忆。
+   * 返回是否真的压缩成功。
+   */
+  async compressRoom(roomId: number, keepBullets: number, summarize: Summarizer): Promise<boolean> {
+    const current = this.repo.getRoom(roomId);
+    if (!current?.summary) return false;
+    const before = current.summary.length;
+
+    let compressed = '';
+    try {
+      compressed = (await summarize(current.summary, keepBullets)) ?? '';
+    } catch (error) {
+      this.logger.warn('memory', `房间摘要压缩失败，保留原文：${String(error)}`);
+      return false;
+    }
+
+    const safe = this.guards.filterSummary(compressed, 2000);
+    if (!safe) {
+      this.logger.warn('memory', '压缩结果为空或触发安全过滤，保留原文');
+      return false;
+    }
+    if (safe.length >= before) return false; // 没变小就没必要替换
+
+    this.saveRoomSummary(roomId, safe);
+    this.logger.info('memory', `房间摘要已压缩：${before} → ${safe.length} 字`);
+    return true;
+  }
+
+  /** 归档长期没互动的观众记忆，避免越攒越多；days <= 0 表示不归档 */
+  archiveStaleUsers(days: number): number {
+    if (days <= 0) return 0;
+    const deadline = Date.now() - days * 86_400_000;
+    const stale = this.repo.listUsers().filter((u) => (u.lastSeen ?? 0) < deadline);
+    stale.forEach((u) => this.repo.deleteUser(u.uid));
+    if (stale.length) this.logger.info('memory', `已归档 ${stale.length} 条超过 ${days} 天未互动的观众记忆`);
+    return stale.length;
+  }
+
+  /**
+   * 兜底裁剪：即使模型不可用，也把摘要压到阈值内。
+   * 注意：安全过滤会把换行压成空格，摘要通常是单行，所以必须同时支持按行与按句裁剪。
+   */
+  trimRoomSummary(roomId: number, maxChars: number): boolean {
+    if (maxChars <= 0) return false;
+    const current = this.repo.getRoom(roomId);
+    const summary = current?.summary?.trim();
+    if (!summary || summary.length <= maxChars) return false;
+
+    const trimmed = this.cutSummary(summary, maxChars);
+    if (!trimmed || trimmed.length >= summary.length) return false;
+    this.saveRoomSummary(roomId, trimmed);
+    this.logger.info('memory', `房间摘要已裁剪：${summary.length} → ${trimmed.length} 字`);
+    return true;
+  }
+
+  /** 保留最近的内容：多行时按行保留，单行时从句号等边界处切断，避免留下半句话 */
+  private cutSummary(summary: string, maxChars: number): string {
+    const lines = summary.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+    if (lines.length > 1) {
+      const kept: string[] = [];
+      let size = 0;
+      for (let i = lines.length - 1; i >= 0; i -= 1) {
+        if (kept.length && size + lines[i].length > maxChars) break;
+        kept.unshift(lines[i]);
+        size += lines[i].length + 1;
+      }
+      return kept.join('\n');
+    }
+
+    const tail = summary.slice(Math.max(0, summary.length - maxChars));
+    const boundary = tail.search(/[。！？；;!?]/);
+    return boundary >= 20 ? tail.slice(boundary + 1).trim() : tail.trim();
   }
 }

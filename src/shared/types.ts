@@ -205,6 +205,19 @@ export interface AppConfig {
     summaryDays: number;
     memoryDays: number;
   };
+  /** 记忆自动整理：控制房间摘要压缩与观众记忆归档 */
+  memory: {
+    /** 关闭后摘要与观众记忆只增不减（可在记忆页手动删除） */
+    autoCompress: boolean;
+    /** 房间摘要超过这个字符数就触发一次压缩 */
+    maxSummaryChars: number;
+    /** 压缩后保留的要点条数 */
+    keepBullets: number;
+    /** 观众超过这么多天没互动就归档（0 = 不归档） */
+    staleUserDays: number;
+    /** 自动整理的检查间隔 */
+    intervalMs: number;
+  };
   activePersonaId: string;
 }
 

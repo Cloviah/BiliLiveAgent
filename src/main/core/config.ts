@@ -9,6 +9,7 @@ import {
   DEFAULT_IDLE_PROACTIVE_MS,
   DEFAULT_MAX_SEND_PER_HOUR,
   DEFAULT_MAX_SEND_PER_MINUTE,
+  DEFAULT_MEMORY,
   DEFAULT_MIN_SEND_INTERVAL_MS,
   DEFAULT_PRICE_INPUT,
   DEFAULT_PRICE_OUTPUT,
@@ -70,6 +71,7 @@ export function defaultConfig(): AppConfig {
       maxSendPerHourHard: 40,
     },
     retention: { ...DEFAULT_RETENTION },
+    memory: { ...DEFAULT_MEMORY },
     activePersonaId: 'builtin-neutral',
   };
 }
@@ -91,6 +93,7 @@ export function mergeConfig(base: AppConfig, patch: Partial<AppConfig>): AppConf
     plugins: { ...defaults.plugins, ...base.plugins, ...(patch.plugins ?? {}) },
     safety: { ...defaults.safety, ...base.safety, ...(patch.safety ?? {}) },
     retention: { ...defaults.retention, ...base.retention, ...(patch.retention ?? {}) },
+    memory: { ...defaults.memory, ...base.memory, ...(patch.memory ?? {}) },
     activePersonaId: patch.activePersonaId ?? base.activePersonaId ?? defaults.activePersonaId,
   };
 }

@@ -3,6 +3,7 @@ import AccountPanel from '../components/panels/AccountPanel';
 import ModelPanel from '../components/panels/ModelPanel';
 import InteractionPanel from '../components/panels/InteractionPanel';
 import PluginPanel from '../components/panels/PluginPanel';
+import MemoryPanel from '../components/panels/MemoryPanel';
 import LifecyclePanel, { RetentionCard } from '../components/panels/LifecyclePanel';
 import DataPanel from '../components/panels/DataPanel';
 import DiagPanel from '../components/panels/DiagPanel';
@@ -18,6 +19,7 @@ export default function SettingsPage({ ctx }: { ctx: AppCtx }) {
       </div>
       <InteractionPanel ctx={ctx} />
       <PluginPanel ctx={ctx} />
+      <MemoryPanel ctx={ctx} />
       <DataPanel ctx={ctx} />
       <DiagPanel ctx={ctx} />
     </div>

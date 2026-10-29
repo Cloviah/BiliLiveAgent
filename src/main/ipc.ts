@@ -218,6 +218,15 @@ export function registerIpc(ctx: AppContext): void {
     limit: config.get().plugins.webSearch.dailyMaxCalls,
   }));
 
+  ipcMain.handle(CH.memoryCompress, async () => {
+    const { compressed, archived } = await ctx.engine.compressNow(true);
+    const parts: string[] = [];
+    parts.push(compressed ? '房间摘要已压缩' : '房间摘要无需压缩');
+    if (archived) parts.push(`归档 ${archived} 条长期未互动记忆`);
+    return { ok: true, message: parts.join('，') };
+  });
+  ipcMain.handle(CH.memoryStats, () => ctx.engine.memoryStats());
+
   ipcMain.handle(CH.diagRun, async (_e, scope: string): Promise<DiagnosticsResult> => {
     if (scope === 'room') {
       const roomId = config.get().room.roomId;
